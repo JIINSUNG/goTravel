@@ -45,8 +45,10 @@ export interface Vault {
   version: number;
   trips: Trip[];
   places: PlaceVisit[];
+  /** 지운 여행·장소의 id → 지운 시각. 동기화 병합 때 다른 기기에 남아 있던 옛 사본이 되살아나지 않게 막는다. */
+  deleted?: Record<string, number>;
 }
 
 export function emptyVault(): Vault {
-  return { version: 1, trips: [], places: [] };
+  return { version: 1, trips: [], places: [], deleted: {} };
 }

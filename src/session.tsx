@@ -4,7 +4,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { clearStoredVault, loadStoredVault, requestPersistence, saveStoredVault } from "./lib/storage";
 import type { CloudVault } from "./lib/sync";
-import { mergeVaults } from "./lib/merge";
+import { mergeVaults, normalizeVault } from "./lib/merge";
 import { isSyncConfigured } from "./lib/sync-env";
 import { consumeSyncRedirectPending } from "./lib/sync-pending";
 import { emptyVault, type Vault } from "./types";
@@ -45,11 +45,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // 이 기기에서 사용자가 직접 뭔가 바꿨을 때만 true — 실시간 구독이 받아온 걸 합친 것뿐이면 안
   // 켜서, "받기 → 다시 올리기 → 상대가 또 받아서 또 올리기"로 핑퐁 치는 걸 막는다.
   const dirtyRef = useRef(false);
+  // 처음 로그인(지금 동기화)에 성공하면 올려서, 새로고침 없이도 실시간 구독이 바로 시작되게 한다.
+  const [subscribeKey, setSubscribeKey] = useState(0);
 
   useEffect(() => {
     loadStoredVault().then(async (stored) => {
       if (stored) {
-        setVault(stored);
+        setVault(normalizeVault(stored));
       } else {
         const fresh = emptyVault();
         await saveStoredVault({ ...fresh, updatedAt: Date.now() });
@@ -121,6 +123,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setError(null);
         setSyncStatus("success");
         setLastSyncedAt(now);
+        setSubscribeKey((k) => k + 1);
         try {
           localStorage.setItem(LAST_SYNCED_KEY, String(now));
         } catch {
@@ -173,7 +176,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       unsubRef.current?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!vault]);
+  }, [!!vault, subscribeKey]);
 
   // 이 기기에서 바뀐 내용은 잠깐(0.8초) 더 안 바뀌면 자동으로 올린다.
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

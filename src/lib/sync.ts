@@ -59,6 +59,7 @@ function getDb(): Firestore {
     try {
       dbInstance = initializeFirestore(getApp(), {
         localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({}) }),
+        ignoreUndefinedProperties: true,
       });
     } catch {
       dbInstance = getFirestore(getApp());
@@ -116,7 +117,9 @@ export async function pullStoredVault(uid: string): Promise<CloudVault | null> {
 }
 
 export async function pushStoredVault(uid: string, cloud: CloudVault): Promise<void> {
-  const clean = Object.fromEntries(Object.entries(cloud).filter(([, v]) => v !== undefined));
+  // Firestore는 값이 undefined인 필드를 (중첩된 장소 안에 있어도) 거부한다. 장소를 고치면 비운 칸이
+  // undefined로 남기 때문에, JSON 왕복으로 깊은 곳까지 싹 걸러낸다 — 안 그러면 자동 올리기가 조용히 실패한다.
+  const clean = JSON.parse(JSON.stringify(cloud)) as CloudVault;
   await setDoc(doc(getDb(), VAULTS_COLLECTION, uid), clean);
 }
 

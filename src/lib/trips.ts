@@ -15,10 +15,16 @@ export function updateTrip(vault: Vault, id: string, patch: Partial<Pick<Trip, "
 
 /** 여행을 지운다 — 그 여행에 묶인 장소들은 안 지우고, 묶음만 풀어서(tripId 제거) 그대로 남긴다. */
 export function deleteTrip(vault: Vault, id: string): Vault {
+  const now = Date.now();
   return {
     ...vault,
     trips: vault.trips.filter((t) => t.id !== id),
-    places: vault.places.map((p) => (p.tripId === id ? { ...p, tripId: undefined, updatedAt: Date.now() } : p)),
+    places: vault.places.map((p) => {
+      if (p.tripId !== id) return p;
+      const { tripId: _drop, ...rest } = p;
+      return { ...rest, updatedAt: now };
+    }),
+    deleted: { ...vault.deleted, [id]: now },
   };
 }
 
@@ -56,7 +62,7 @@ export function updatePlace(
 }
 
 export function deletePlace(vault: Vault, id: string): Vault {
-  return { ...vault, places: vault.places.filter((p) => p.id !== id) };
+  return { ...vault, places: vault.places.filter((p) => p.id !== id), deleted: { ...vault.deleted, [id]: Date.now() } };
 }
 
 export function findPlace(vault: Vault, id: string): PlaceVisit | undefined {

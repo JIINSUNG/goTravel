@@ -24,3 +24,24 @@ describe("mergeVaults", () => {
     expect(mergeVaults(local, incoming).version).toBe(2);
   });
 });
+
+describe("mergeVaults — 지운 항목", () => {
+  it("한쪽에서 지운 장소는 다른 쪽 옛 사본이 있어도 되살아나지 않는다", () => {
+    const local: Vault = { ...emptyVault(), deleted: { p1: 50 } };
+    const incoming: Vault = { ...emptyVault(), places: [{ id: "p1", name: "라멘집", createdAt: 1, updatedAt: 10 }] };
+    const merged = mergeVaults(local, incoming);
+    expect(merged.places).toHaveLength(0);
+    expect(merged.deleted).toEqual({ p1: 50 });
+  });
+
+  it("지운 뒤에 다른 기기에서 고쳤다면 고친 쪽을 살린다", () => {
+    const local: Vault = { ...emptyVault(), deleted: { p1: 50 } };
+    const incoming: Vault = { ...emptyVault(), places: [{ id: "p1", name: "라멘집", createdAt: 1, updatedAt: 60 }] };
+    expect(mergeVaults(local, incoming).places.map((p) => p.id)).toEqual(["p1"]);
+  });
+
+  it("deleted가 없는 옛 Vault와도 합쳐진다", () => {
+    const old = { version: 1, trips: [], places: [] } as Vault;
+    expect(mergeVaults(old, { ...emptyVault(), deleted: { t1: 5 } }).deleted).toEqual({ t1: 5 });
+  });
+});

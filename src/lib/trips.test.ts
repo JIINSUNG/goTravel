@@ -77,3 +77,20 @@ describe("trips", () => {
     expect(searchPlaces(v, "").map((p) => p.id)).toEqual(["p1", "p2"]);
   });
 });
+
+describe("삭제 기록", () => {
+  it("deletePlace·deleteTrip은 deleted에 지운 시각을 남긴다", () => {
+    let v = createTrip(emptyVault(), "오사카", "t1");
+    v = createPlace(v, { name: "라멘집", tripId: "t1" }, "p1");
+    v = deletePlace(v, "p1");
+    v = deleteTrip(v, "t1");
+    expect(Object.keys(v.deleted ?? {}).sort()).toEqual(["p1", "t1"]);
+  });
+
+  it("deleteTrip으로 풀린 장소에는 tripId 키 자체가 남지 않는다(동기화 때 undefined 방지)", () => {
+    let v = createTrip(emptyVault(), "오사카", "t1");
+    v = createPlace(v, { name: "라멘집", tripId: "t1" }, "p1");
+    v = deleteTrip(v, "t1");
+    expect("tripId" in findPlace(v, "p1")!).toBe(false);
+  });
+});
