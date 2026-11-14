@@ -1,12 +1,44 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSession } from "../session";
 import { isKakaoConfigured } from "../lib/kakao";
 import { timeAgo } from "../lib/format";
-import { linkStyle, stickyHeaderStyle } from "../lib/layout";
+import { stickyHeaderStyle } from "../lib/layout";
+import { backupFileName, parseBackup, serializeBackup } from "../lib/backup";
+import { mergeVaults } from "../lib/merge";
 
-export function Settings({ onBack }: { onBack: () => void }) {
-  const { vault, syncConfigured, syncNow, syncStatus, lastSyncedAt, error: syncError, resetDevice } = useSession();
+export function Settings() {
+  const { vault, update, syncConfigured, syncNow, syncStatus, lastSyncedAt, error: syncError, resetDevice } = useSession();
   const [message, setMessage] = useState<string | null>(null);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    if (!vault) return;
+    const blob = new Blob([serializeBackup(vault)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = backupFileName();
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setBackupError(null);
+    setMessage("백업 파일을 저장했어요.");
+  };
+
+  const handleImport = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const imported = parseBackup(await file.text());
+      // 덮어쓰지 않고 합친다 — 같은 기록은 더 최근에 고친 쪽이 남고, 이 기기에만 있던 기록도 그대로 남는다.
+      update((v) => mergeVaults(v, imported));
+      setBackupError(null);
+      setMessage(`백업을 불러왔어요. (여행 ${imported.trips.length}개 · 장소 ${imported.places.length}곳)`);
+    } catch (err) {
+      setBackupError(err instanceof Error ? err.message : "백업을 불러오지 못했어요.");
+    } finally {
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   const handleSync = async () => {
     const ok = await syncNow();
@@ -21,12 +53,8 @@ export function Settings({ onBack }: { onBack: () => void }) {
 
   return (
     <main style={{ display: "flex", flexDirection: "column", gap: 20, paddingTop: 16 }}>
-      <div style={{ ...stickyHeaderStyle, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <button type="button" onClick={onBack} style={linkStyle}>
-          ← 여행
-        </button>
-        <h1 style={{ fontSize: 18, margin: 0 }}>설정</h1>
-        <span style={{ width: 40 }} />
+      <div style={stickyHeaderStyle}>
+        <h1 style={{ fontSize: 20, margin: 0 }}>설정</h1>
       </div>
 
       {message && <p style={{ margin: 0, fontSize: 13, color: "var(--ok)" }}>{message}</p>}
@@ -65,6 +93,24 @@ export function Settings({ onBack }: { onBack: () => void }) {
       </section>
 
       <section style={sectionStyle}>
+        <h2 style={headingStyle}>백업</h2>
+        <p style={hintStyle}>
+          {syncConfigured ? "" : "동기화를 안 쓰면 기록이 이 기기 브라우저 안에만 있어요. 폰을 바꾸거나 브라우저 데이터를 지우기 전에 파일로 빼두세요. "}
+          불러오면 지금 기록을 덮어쓰지 않고 합쳐요.
+        </p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="button" onClick={handleExport} style={primaryBtnStyle}>
+            백업 파일 저장
+          </button>
+          <button type="button" onClick={() => fileRef.current?.click()} style={secondaryBtnStyle}>
+            백업 불러오기
+          </button>
+          <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => void handleImport(e.target.files?.[0])} />
+        </div>
+        {backupError && <p style={{ ...hintStyle, color: "var(--warn)" }}>⚠️ {backupError}</p>}
+      </section>
+
+      <section style={sectionStyle}>
         <h2 style={headingStyle}>이 기기 기록 초기화</h2>
         <p style={hintStyle}>기록이 꼬였거나 처음부터 다시 시작하고 싶을 때 쓰세요.</p>
         <button type="button" onClick={handleReset} style={warnBtnStyle}>
@@ -85,6 +131,16 @@ const primaryBtnStyle: React.CSSProperties = {
   border: "none",
   background: "var(--accent)",
   color: "var(--accent-fg)",
+  fontSize: 14,
+  fontWeight: 600,
+};
+const secondaryBtnStyle: React.CSSProperties = {
+  alignSelf: "flex-start",
+  padding: "10px 16px",
+  borderRadius: "var(--radius)",
+  border: "1px solid var(--line)",
+  background: "var(--field)",
+  color: "var(--fg)",
   fontSize: 14,
   fontWeight: 600,
 };

@@ -11,9 +11,15 @@ interface KakaoLatLng {
   getLng(): number;
 }
 
+interface KakaoLatLngBounds {
+  extend(latlng: KakaoLatLng): void;
+}
+
 interface KakaoMap {
   setCenter(latlng: KakaoLatLng): void;
   setLevel(level: number): void;
+  setBounds(bounds: KakaoLatLngBounds, paddingTop?: number, paddingRight?: number, paddingBottom?: number, paddingLeft?: number): void;
+  relayout(): void;
 }
 
 interface KakaoMarker {
@@ -35,7 +41,11 @@ interface KakaoNamespace {
     load: (cb: () => void) => void;
     LatLng: new (lat: number, lng: number) => KakaoLatLng;
     Map: new (container: HTMLElement, options: { center: KakaoLatLng; level: number }) => KakaoMap;
-    Marker: new (options: { position: KakaoLatLng; map?: KakaoMap }) => KakaoMarker;
+    LatLngBounds: new () => KakaoLatLngBounds;
+    Marker: new (options: { position: KakaoLatLng; map?: KakaoMap; title?: string; clickable?: boolean }) => KakaoMarker;
+    event: {
+      addListener: (target: KakaoMarker | KakaoMap, type: string, handler: () => void) => void;
+    };
     services: {
       Places: new () => {
         keywordSearch: (keyword: string, callback: (data: KakaoPlaceSearchResult[], status: string) => void) => void;
@@ -109,4 +119,4 @@ export async function searchKakaoPlaces(keyword: string): Promise<KakaoPlaceResu
   });
 }
 
-export type { KakaoNamespace, KakaoMap, KakaoLatLng };
+export type { KakaoNamespace, KakaoMap, KakaoLatLng, KakaoMarker };

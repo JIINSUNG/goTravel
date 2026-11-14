@@ -21,7 +21,8 @@ src/
   types.ts              데이터 타입(Trip, PlaceVisit, Vault)
   lib/storage.ts         IndexedDB 저장/불러오기 (평문)
   lib/trips.ts            Trip/PlaceVisit CRUD, 검색, 합계
-  lib/merge.ts            항목별 updatedAt 최신 우선 병합 (동기화용)
+  lib/merge.ts            항목별 updatedAt 최신 우선 병합 + 삭제 기록(deleted) 반영 (동기화용)
+  lib/backup.ts           백업 파일(JSON) 내보내기·불러오기
   lib/kakao.ts            카카오맵 SDK 로더 + 장소 검색
   lib/sync.ts             Firebase 동기화 — 실시간 구독 + 자동 올리기
   lib/format.ts           날짜·금액 표시

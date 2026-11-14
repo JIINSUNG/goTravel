@@ -11,6 +11,10 @@ import {
   searchPlaces,
   tripTotalSpent,
   unassignedPlaces,
+  sortTrips,
+  groupPlacesByDate,
+  spentByCategory,
+  placeCategoryFromKakao,
   updatePlace,
   updateTrip,
 } from "./trips";
@@ -92,5 +96,47 @@ describe("삭제 기록", () => {
     v = createPlace(v, { name: "라멘집", tripId: "t1" }, "p1");
     v = deleteTrip(v, "t1");
     expect("tripId" in findPlace(v, "p1")!).toBe(false);
+  });
+});
+
+describe("목록 도우미", () => {
+  it("sortTrips는 시작일 최근순, 시작일 없으면 뒤로", () => {
+    let v = createTrip(emptyVault(), "A", "a");
+    v = createTrip(v, "B", "b");
+    v = createTrip(v, "C", "c");
+    v = updateTrip(v, "a", { startDate: "2025-01-01" });
+    v = updateTrip(v, "b", { startDate: "2026-01-01" });
+    expect(sortTrips(v.trips).map((t) => t.id)).toEqual(["b", "a", "c"]);
+  });
+
+  it("groupPlacesByDate는 날짜순으로 묶고 날짜 없는 건 맨 뒤", () => {
+    let v = createPlace(emptyVault(), { name: "x" }, "x");
+    v = createPlace(v, { name: "y" }, "y");
+    v = createPlace(v, { name: "z" }, "z");
+    v = updatePlace(v, "y", { visitDate: "2026-05-02" });
+    v = updatePlace(v, "z", { visitDate: "2026-05-01" });
+    expect(groupPlacesByDate(v.places).map((g) => g.date)).toEqual(["2026-05-01", "2026-05-02", null]);
+  });
+
+  it("spentByCategory는 분류별 합계를 많이 쓴 순으로", () => {
+    let v = createPlace(emptyVault(), { name: "a", category: "식당" }, "a");
+    v = createPlace(v, { name: "b", category: "카페" }, "b");
+    v = createPlace(v, { name: "c" }, "c");
+    v = updatePlace(v, "a", { amountSpent: 10000 });
+    v = updatePlace(v, "b", { amountSpent: 5000 });
+    v = updatePlace(v, "c", { amountSpent: 20000 });
+    expect(spentByCategory(v.places)).toEqual([
+      { category: "기타", total: 20000 },
+      { category: "식당", total: 10000 },
+      { category: "카페", total: 5000 },
+    ]);
+  });
+
+  it("placeCategoryFromKakao", () => {
+    expect(placeCategoryFromKakao("음식점")).toBe("식당");
+    expect(placeCategoryFromKakao("카페")).toBe("카페");
+    expect(placeCategoryFromKakao("숙박")).toBe("숙소");
+    expect(placeCategoryFromKakao("관광명소")).toBe("관광지");
+    expect(placeCategoryFromKakao("병원")).toBeUndefined();
   });
 });

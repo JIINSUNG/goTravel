@@ -89,3 +89,48 @@ export function searchPlaces(vault: Vault, query: string): PlaceVisit[] {
 export function tripTotalSpent(vault: Vault, tripId: string): number {
   return placesForTrip(vault, tripId).reduce((sum, p) => sum + (p.amountSpent ?? 0), 0);
 }
+
+/** 여행 목록 정렬 — 시작일이 있으면 최근 여행이 위로, 없으면 만든 순서(최근이 위). */
+export function sortTrips(trips: Trip[]): Trip[] {
+  return [...trips].sort((a, b) => {
+    const ka = a.startDate ?? "";
+    const kb = b.startDate ?? "";
+    if (ka !== kb) return kb.localeCompare(ka);
+    return b.createdAt - a.createdAt;
+  });
+}
+
+/** 장소들을 다녀온 날짜별로 묶는다 — 날짜 오름차순, 날짜 없는 장소는 맨 뒤 한 묶음(date: null). */
+export function groupPlacesByDate(places: PlaceVisit[]): { date: string | null; places: PlaceVisit[] }[] {
+  const byDate = new Map<string, PlaceVisit[]>();
+  const undated: PlaceVisit[] = [];
+  for (const p of [...places].sort((a, b) => a.createdAt - b.createdAt)) {
+    if (!p.visitDate) undated.push(p);
+    else byDate.set(p.visitDate, [...(byDate.get(p.visitDate) ?? []), p]);
+  }
+  const groups: { date: string | null; places: PlaceVisit[] }[] = [...byDate.keys()].sort().map((date) => ({ date, places: byDate.get(date)! }));
+  if (undated.length > 0) groups.push({ date: null, places: undated });
+  return groups;
+}
+
+/** 분류별로 쓴 돈 합계 — 금액이 있는 분류만, 많이 쓴 순. 분류 없는 장소는 "기타"로 친다. */
+export function spentByCategory(places: PlaceVisit[]): { category: PlaceCategory; total: number }[] {
+  const totals = new Map<PlaceCategory, number>();
+  for (const p of places) {
+    if (!p.amountSpent) continue;
+    const c = p.category ?? "기타";
+    totals.set(c, (totals.get(c) ?? 0) + p.amountSpent);
+  }
+  return [...totals.entries()].map(([category, total]) => ({ category, total })).sort((a, b) => b.total - a.total);
+}
+
+/** 카카오맵 장소 검색 결과의 category_group_name을 이 앱의 분류로 옮긴다. 모르는 건 undefined. */
+export function placeCategoryFromKakao(group: string | undefined): PlaceCategory | undefined {
+  if (!group) return undefined;
+  if (group.includes("음식점")) return "식당";
+  if (group.includes("카페")) return "카페";
+  if (group.includes("숙박")) return "숙소";
+  if (group.includes("관광") || group.includes("문화시설")) return "관광지";
+  if (group.includes("마트") || group.includes("편의점") || group.includes("백화점")) return "쇼핑";
+  return undefined;
+}
