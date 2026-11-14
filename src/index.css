@@ -1,0 +1,95 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f5f4f2;
+  --card: #ffffff;
+  --field: #f1f0ee;
+  --line: #e4e2de;
+  --fg: #1c1b1a;
+  --fg2: #4a4745;
+  --muted: #8a8682;
+  --accent: #2f7a5e;
+  --accent-fg: #ffffff;
+  --warn: #c23b3b;
+  --ok: #3f7d4f;
+  --radius: 16px;
+  --font: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161a18;
+    --card: #20241f;
+    --field: #262b26;
+    --line: #353a34;
+    --fg: #ecece8;
+    --fg2: #c4c4c0;
+    --muted: #8a8a84;
+    --accent: #4fae86;
+    --accent-fg: #0c1a13;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  /* html·body 자체는 스크롤/고무줄 바운스가 안 되게 막는다 — 실제 스크롤은 App.tsx의 Shell이
+     만드는 안쪽 영역 하나에서만 일어난다. */
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* #root는 높이·너비만 잡고, 좌우 패딩은 Shell의 스크롤 영역에만 준다 — 그래야 탭바(그 형제
+   엘리먼트)가 화면 끝까지 닿는다. */
+#root {
+  max-width: 480px;
+  margin: 0 auto;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+/* iOS Safari는 포커스된 입력칸의 글자 크기가 16px 미만이면 화면을 자동으로 확대한다. */
+input,
+textarea,
+select {
+  font-size: max(16px, 1em);
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
